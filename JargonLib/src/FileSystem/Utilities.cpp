@@ -154,6 +154,49 @@ namespace FileSystem{
 		return true;
 	}
 
+	bool getFileModifiedTimeUnixEpochSeconds(const char* filename, int64_t* unixSecondsOut) {
+		const std::wstring filenameWide = Jargon::StringUtilities::utf8ToWide(filename);
+
+		return getFileModifiedTimeUnixEpochSeconds(filenameWide.c_str(), unixSecondsOut);
+	}
+
+	bool getFileModifiedTimeUnixEpochSeconds(const wchar_t* filename, int64_t* unixSecondsOut) {
+		WIN32_FILE_ATTRIBUTE_DATA attributeData = {};
+		if (!GetFileAttributesExW(filename, GetFileExInfoStandard, &attributeData)) {
+			return false;
+		}
+
+		LARGE_INTEGER windowsTimestamp = {};
+		windowsTimestamp.HighPart = attributeData.ftLastWriteTime.dwHighDateTime;
+		windowsTimestamp.LowPart = attributeData.ftLastWriteTime.dwLowDateTime;
+
+		const int64_t windowsUnitsPerSecond = 10000000LL;
+		const int64_t windowsSeconds = (int64_t)(windowsTimestamp.QuadPart / windowsUnitsPerSecond);
+		const int64_t windowsToUnixSeconds = -11644473600LL;
+		const int64_t unixSeconds = windowsSeconds + windowsToUnixSeconds;
+
+		*unixSecondsOut = unixSeconds;
+
+		return true;
+	}
+
+	bool getFileHiddenAttribute(const char* filename, bool* hiddenFlagOut) {
+		const std::wstring filenameWide = Jargon::StringUtilities::utf8ToWide(filename);
+
+		return getFileHiddenAttribute(filenameWide.c_str(), hiddenFlagOut);
+	}
+
+	bool getFileHiddenAttribute(const wchar_t* filename, bool* hiddenFlagOut) {
+		WIN32_FILE_ATTRIBUTE_DATA attributeData = {};
+		if (!GetFileAttributesExW(filename, GetFileExInfoStandard, &attributeData)) {
+			return false;
+		}
+
+		*hiddenFlagOut = (attributeData.dwFileAttributes & FILE_ATTRIBUTE_HIDDEN) != 0;
+
+		return true;
+	}
+
 	std::string addLongPathPrefixIfNeeded(const std::string& filename) {
 		if (isAbsolutePath(filename.c_str()) && filename.length() >= WindowsMaxPathLength) {
 			return ensureLongPathPrefix(filename);
@@ -168,6 +211,18 @@ namespace FileSystem{
 		}
 
 		return filename;
+	}
+
+	void ensureTrailingSlash(std::string& path) {
+		if (!Jargon::StringUtilities::stringEndsWith(path, '\\')) {
+			path += '\\';
+		}
+	}
+
+	void ensureTrailingSlash(std::wstring& path) {
+		if (!Jargon::StringUtilities::stringEndsWith(path, L'\\')) {
+			path += L'\\';
+		}
 	}
 
 	std::string ensureLongPathPrefix(const char* filename) {
@@ -191,7 +246,7 @@ namespace FileSystem{
 			return Jargon::StringUtilities::utf8ToWide(filename);
 		}
 
-		return Jargon::StringUtilities::formatWide(L"%ls%s", WindowsLongNamePrefixWide, filename);
+		return Jargon::StringUtilities::formatWide(L"%ls%hs", WindowsLongNamePrefixWide, filename);
 	}
 
 	std::wstring ensureLongPathPrefixWide(const wchar_t* filename) {
@@ -327,83 +382,53 @@ namespace FileSystem{
 		FindClose(findHandle);
 	}
 
-	std::string_view getBaseFilename(const char* sourceFilename){
-		std::string_view filenameView(sourceFilename);
-
-		size_t filenameStart = 0;
-		size_t filenameEnd = 0;
-
-		size_t slashLocation = filenameView.find_last_of("\\/");
-		if (slashLocation != std::string_view::npos) {
-			filenameStart = slashLocation + 1;
-		}
-
-		size_t dotLocation = std::string_view(sourceFilename + filenameStart).find_last_of('.');
-		if (dotLocation == std::string_view::npos) {
-			filenameEnd = filenameView.length();
-		} else {
-			filenameEnd = filenameStart + dotLocation;
-		}
-
-		return filenameView.substr(filenameStart, filenameEnd - filenameStart);
-	}
-
-	std::string_view getFileExtension(const char* filename) {
-		std::string_view filenameView(filename);
-
-		size_t extensionStart = 0;
-
-		size_t dotLocation = filenameView.find_last_of('.');
-		if (dotLocation == std::string_view::npos) {
-			extensionStart = 0;
-		} else {
-			extensionStart = dotLocation + 1;
-		}
-
-		return filenameView.substr(extensionStart, filenameView.length());
-	}
-
-	std::string_view removeFileExtension(const char* filename) {
-		std::string_view filenameView(filename);
-
-		size_t dotLocation = filenameView.find_last_of('.');
-		if (dotLocation == std::string_view::npos) {
-			return filenameView;
-		} else {
-			return filenameView.substr(0, dotLocation);
-		}
-	}
 
 	void extractPathAndFilename(const char* filename, std::string& pathOut, std::string& filenameAndExtensionOut) {
-		extractPathAndFilename<std::string>(filename, pathOut, filenameAndExtensionOut);
+		extractPathAndFilename<char, std::string>(filename, pathOut, filenameAndExtensionOut);
 	}
 
 	void extractPathAndFilename(const char* filename, std::string_view& pathOut, std::string_view& filenameAndExtensionOut) {
-		extractPathAndFilename<std::string_view>(filename, pathOut, filenameAndExtensionOut);
+		extractPathAndFilename<char, std::string_view>(filename, pathOut, filenameAndExtensionOut);
 	}
 
 	void extractPathAndFilename(const wchar_t* filename, std::wstring& pathOut, std::wstring& filenameAndExtensionOut) {
-		extractPathAndFilename<std::wstring>(filename, pathOut, filenameAndExtensionOut);
+		extractPathAndFilename<wchar_t, std::wstring>(filename, pathOut, filenameAndExtensionOut);
 	}
 
 	void extractPathAndFilename(const wchar_t* filename, std::wstring_view& pathOut, std::wstring_view& filenameAndExtensionOut) {
-		extractPathAndFilename<std::wstring_view>(filename, pathOut, filenameAndExtensionOut);
+		extractPathAndFilename<wchar_t, std::wstring_view>(filename, pathOut, filenameAndExtensionOut);
 	}
 
 	void extractFilenameAndExtension(const char* filename, std::string_view& filenameOut, std::string_view& dottedExtensionOut) {
-		extractFilenameAndExtension<std::string_view>(filename, filenameOut, dottedExtensionOut);
+		extractFilenameAndExtension<char, std::string_view>(filename, filenameOut, dottedExtensionOut);
 	}
 
 	void extractFilenameAndExtension(const char* filename, std::string& filenameOut, std::string& dottedExtensionOut) {
-		extractFilenameAndExtension<std::string>(filename, filenameOut, dottedExtensionOut);
+		extractFilenameAndExtension<char, std::string>(filename, filenameOut, dottedExtensionOut);
+	}
+
+	void extractFilenameAndExtension(const wchar_t* filename, std::wstring_view& filenameOut, std::wstring_view& dottedExtensionOut) {
+		extractFilenameAndExtension<wchar_t, std::wstring_view>(filename, filenameOut, dottedExtensionOut);
+	}
+
+	void extractFilenameAndExtension(const wchar_t* filename, std::wstring& filenameOut, std::wstring& dottedExtensionOut) {
+		extractFilenameAndExtension<wchar_t, std::wstring>(filename, filenameOut, dottedExtensionOut);
 	}
 
 	void extractPathFilenameAndExtension(const char* filename, std::string_view& pathOut, std::string_view& filenameOut, std::string_view& dottedExtensionOut) {
-		extractPathFilenameAndExtension<std::string_view>(filename, pathOut, filenameOut, dottedExtensionOut);
+		extractPathFilenameAndExtension<char, std::string_view>(filename, pathOut, filenameOut, dottedExtensionOut);
 	}
 
 	void extractPathFilenameAndExtension(const char* filename, std::string& pathOut, std::string& filenameOut, std::string& dottedExtensionOut) {
-		extractPathFilenameAndExtension<std::string>(filename, pathOut, filenameOut, dottedExtensionOut);
+		extractPathFilenameAndExtension<char, std::string>(filename, pathOut, filenameOut, dottedExtensionOut);
+	}
+
+	void extractPathFilenameAndExtension(const wchar_t* filename, std::wstring_view& pathOut, std::wstring_view& filenameOut, std::wstring_view& dottedExtensionOut) {
+		extractPathFilenameAndExtension<wchar_t, std::wstring_view>(filename, pathOut, filenameOut, dottedExtensionOut);
+	}
+
+	void extractPathFilenameAndExtension(const wchar_t* filename, std::wstring& pathOut, std::wstring& filenameOut, std::wstring& dottedExtensionOut) {
+		extractPathFilenameAndExtension<wchar_t, std::wstring>(filename, pathOut, filenameOut, dottedExtensionOut);
 	}
 
 	std::string changeFileExtension(const char* filename, const char* newExtension) {
@@ -438,34 +463,6 @@ namespace FileSystem{
 		changed += newExtension;
 
 		return changed;
-	}
-
-	std::string_view getFilenameComponent(const char* filePath){
-		assert(filePath != nullptr);
-
-		std::string_view filePathView(filePath);
-		size_t slashLocation = filePathView.find_last_of("\\/");
-
-		if (slashLocation != std::string::npos) {
-			return filePathView.substr(slashLocation + 1);
-		} else {
-			return filePathView;
-		}
-	}
-
-	std::string_view getPathComponent(const char* filePath)
-	{
-		assert(filePath != nullptr);
-
-		std::string_view filePathView(filePath);
-		size_t slashLocation = filePathView.find_last_of("\\/");
-
-		if (slashLocation != std::string::npos) {
-			return filePathView.substr(0, slashLocation + 1);
-		}
-		else {
-			return std::string_view();
-		}
 	}
 
 	bool isAbsolutePath(const char* path){
@@ -678,6 +675,16 @@ namespace FileSystem{
 		return relativePath;
 	}
 
+	bool getFullPathName(const char* filePath, std::string& fullPathOut) {
+		const std::wstring filePathWide = Jargon::StringUtilities::utf8ToWide(filePath);
+		std::wstring fullPathWide;
+		if (!getFullPathName(filePathWide.c_str(), fullPathWide)) {
+			return false;
+		}
+		fullPathOut = Jargon::StringUtilities::wideToUtf8(fullPathWide);
+		return true;
+	}
+
 	bool getFullPathName(const wchar_t* filePath, std::wstring& fullPathOut) {
 		const DWORD requiredSize = GetFullPathNameW(filePath, 0, nullptr, nullptr);
 
@@ -725,7 +732,12 @@ namespace FileSystem{
 		return canonicalizePathName(filePathWide, canonicalizedOut);
 	}
 
-	bool canonicalizePathName(const std::wstring& filePath, std::string& canonicalizedOut) {
+	bool canonicalizePathName(const std::string_view& filePath, std::string& canonicalizedOut) {
+		const std::wstring filePathWide = Jargon::StringUtilities::utf8ToWide(filePath);
+		return canonicalizePathName(filePathWide, canonicalizedOut);
+	}
+
+	bool canonicalizePathName(const std::wstring& filePath, std::string& canonicalizedOutUtf8) {
 		std::wstring fullPathWide;
 		if(!getFullPathName(filePath.c_str(), fullPathWide)){
 			return false;
@@ -735,7 +747,26 @@ namespace FileSystem{
 		PWSTR finalPath;
 		HRESULT hr = PathAllocCanonicalize(fullPathWide.c_str(), flags, &finalPath);
 		if (SUCCEEDED(hr)) {
-			canonicalizedOut = Jargon::StringUtilities::wideToUtf8(finalPath);
+			canonicalizedOutUtf8 = Jargon::StringUtilities::wideToUtf8(finalPath);
+			LocalFree(finalPath);
+			return true;
+		}
+
+		return false;
+	}
+
+
+	bool canonicalizePathName(const std::wstring& filePath, std::wstring& canonicalizedOut) {
+		std::wstring fullPathWide;
+		if (!getFullPathName(filePath.c_str(), fullPathWide)) {
+			return false;
+		}
+
+		const ULONG flags = PATHCCH_ALLOW_LONG_PATHS | PATHCCH_CANONICALIZE_SLASHES;
+		PWSTR finalPath;
+		HRESULT hr = PathAllocCanonicalize(fullPathWide.c_str(), flags, &finalPath);
+		if (SUCCEEDED(hr)) {
+			canonicalizedOut =finalPath;
 			LocalFree(finalPath);
 			return true;
 		}
@@ -803,7 +834,7 @@ namespace FileSystem{
 		// extract the parent folder
 		std::basic_string<wchar_t> parentPath;
 		std::basic_string<wchar_t> folder;
-		extractPathAndFilename<std::basic_string<wchar_t>>(pathView, parentPath, folder);
+		extractPathAndFilename(pathView, parentPath, folder);
 
 		// make sure the parent folder exists
 		if (!parentPath.empty()){
@@ -832,11 +863,6 @@ namespace FileSystem{
 			flags |= MOVEFILE_WRITE_THROUGH;
 		}
 		return MoveFileExW(oldFilename, newFilename, flags) == TRUE;
-	}
-
-	bool canonicalizePathName(const std::string_view& filePath, std::string& canonicalizedOut) {
-		const std::wstring filePathWide = Jargon::StringUtilities::utf8ToWide(filePath);
-		return canonicalizePathName(filePathWide, canonicalizedOut);
 	}
 
 	bool readEntireFile(const char* filename, ByteBuffer& fileBufferOut) {

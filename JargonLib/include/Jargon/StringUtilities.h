@@ -1,9 +1,10 @@
 #pragma once
 
+#include <cstdarg>
 #include <string>
 #include <string_view>
-#include <cstdarg>
 #include <vector>
+
 
 namespace Jargon{
 namespace StringUtilities{
@@ -50,15 +51,20 @@ namespace StringUtilities{
 	bool stringEqualCaseInsensitive(const std::string& s1, const std::string& s2);
 	bool stringEqualCaseInsensitive(const std::wstring& s1, const std::wstring& s2);
 
-	std::string format(const char * formatString, ...);
-	std::string formatVarArgs(const char * formatString, va_list args);
+	std::string format(_Printf_format_string_ const char * formatString, ...);
+	std::string formatVarArgs(_Printf_format_string_ const char * formatString, va_list args);
 
-	std::wstring formatWide(const wchar_t* formatString, ...);
-	std::wstring formatWideVarArgs(const wchar_t* formatString, va_list args);
+	std::wstring formatWide(_Printf_format_string_ const wchar_t* formatString, ...);
+	std::wstring formatWideVarArgs(_Printf_format_string_ const wchar_t* formatString, va_list args);
 
 	std::string wideToUtf8(const wchar_t *wString, size_t length);
 	std::string wideToUtf8(const wchar_t *wString);
 	std::string wideToUtf8(const std::wstring& wString);
+	std::string wideToUtf8(const std::wstring_view& wString);
+
+	std::wstring systemCodepageToWide(const char* ansiString);
+	std::wstring systemCodepageToWide(const std::string_view& ansiString);
+
 	std::wstring utf8ToWide(const char* utf8string);
 	std::wstring utf8ToWide(const std::string_view& utf8string);
 
@@ -70,21 +76,34 @@ namespace StringUtilities{
 
 	void toLower(std::string* s);
 	void toUpper(std::string* s);
+
 	std::string toLower(const std::string& s);
 	std::string toUpper(const std::string& s);
+
+	std::string toLower(const std::string_view& s);
+	std::string toUpper(const std::string_view& s);
+
 	bool isSpace(char c);
 	bool isSpace(wchar_t c);
+
+	bool caseInsensitiveCharEqualFunctor(char a, char b);
+
+	// use for case-insensitive sort:
+	//    std::sort(x.begin(), x.end(), Jargon::StringUtilities::caseInsensitiveSortFunctor);
+	bool caseInsensitiveSortFunctor(const std::string& s1, const std::string& s2);
+	bool caseInsensitiveSortFunctorReverse(const std::string& s1, const std::string& s2);
+
 
 	bool stringContains(const char* s, char c);
 	bool stringContains(const wchar_t* s, wchar_t c);
 
 	template<class CharT>
 	bool stringContainsAnyOf(const std::basic_string_view<CharT>& sv, const CharT* toFind) {
-		return sv.find_first_of(toFind) != std::string_view::npos;
+		return sv.find_first_of(toFind) != std::basic_string_view<CharT>::npos;
 	}
 	template<class CharT>
 	bool stringContainsAnyOf(const std::basic_string<CharT>& s, const CharT* toFind) {
-		std::string_view sv(s);
+		std::basic_string_view<CharT> sv(s);
 		return stringContainsAnyOf(sv, toFind);
 	}
 	bool stringContainsAnyOf(const char* s, const char* toFind);
@@ -94,6 +113,39 @@ namespace StringUtilities{
 	bool stringContainsOnly(const wchar_t* s, const wchar_t* expected);
 	bool stringContainsOnly(const std::string_view& sv, const char* expected);
 	bool stringContainsOnly(const std::wstring_view& sv, const wchar_t* expected);
+
+
+	template<class CharType>
+	bool stringContainsString(const std::basic_string<CharType>& s, const std::basic_string<CharType>& toFind) {
+		return s.find(toFind) != std::basic_string<CharType>::npos;
+	}
+
+	template<class CharType>
+	bool stringContainsString(const std::basic_string_view<CharType>& s, const std::basic_string_view<CharType>& toFind) {
+		return s.find(toFind) != std::basic_string_view<CharType>::npos;
+	}
+
+	template<class CharType>
+	bool stringContainsString(const std::basic_string_view<CharType>& s, const CharType* toFind) {
+		std::basic_string_view<CharType> toFindView(toFind);
+		return stringContainsString(s, toFindView);
+	}
+
+	template<class CharType>
+	bool stringContainsString(const std::basic_string<CharType>& s, const CharType* toFind) {
+		std::basic_string_view<CharType> sView(s);
+		std::basic_string_view<CharType> toFindView(toFind);
+		return stringContainsString(sView, toFindView);
+	}
+
+	bool stringContainsStringCaseInsensitive(const std::string& s, const std::string& toFind);
+
+	bool stringContainsStringCaseInsensitive(const std::string_view& s, const std::string_view& toFind);
+
+	bool stringContainsStringCaseInsensitive(const std::string_view& s, const char* toFind);
+
+	bool stringContainsStringCaseInsensitive(const std::string& s, const char* toFind);
+
 
 	template<class CharT>
 	bool isEmptyOrWhitespace(const std::basic_string<CharT>& s) {
@@ -112,12 +164,6 @@ namespace StringUtilities{
 	}
 
 	bool isEmptyOrWhitespace(const char* s);
-
-	// use for case-insensitive sort:
-	//    std::sort(x.begin(), x.end(), Jargon::StringUtilities::caseInsensitiveSortFunctor);
-	bool caseInsensitiveSortFunctor(const std::string& s1, const std::string& s2);
-
-	bool caseInsensitiveSortFunctorReverse(const std::string& s1, const std::string& s2);
 
 	template <typename CharType>
 	int trimLeadingWhitespace(std::basic_string<CharType>* stringToTrim) {
@@ -266,16 +312,6 @@ namespace StringUtilities{
 	}
 
 	template <typename CharType>
-	bool stringEndsWith(const std::basic_string_view<CharType>& s, CharType suffix) {
-		return (s.length() > 0) && s[s.length() - 1] == suffix;
-	}
-
-	template <typename CharType>
-	bool stringEndsWith(const std::basic_string<CharType>& s, CharType suffix) {
-		return (s.length() > 0) && s[s.length() - 1] == suffix;
-	}
-
-	template <typename CharType>
 	bool stringBeginsWith(const std::basic_string<CharType>& s, const std::basic_string<CharType>& prefix) {
 		size_t prefixLength = prefix.length();
 
@@ -285,6 +321,7 @@ namespace StringUtilities{
 
 		return stringNCompare(s.c_str(), prefix.c_str(), prefixLength) == 0;
 	}
+
 	template <typename CharType>
 	bool stringBeginsWith(const CharType* s, const CharType* prefix) {
 		size_t sLength = stringLength(s);
@@ -302,6 +339,53 @@ namespace StringUtilities{
 
 
 	template <typename CharType>
+	bool stringBeginsWithCaseInsensitive(const std::basic_string_view<CharType>& s, CharType prefix) {
+		return (s.length() > 0) && std::tolower(s[0]) == std::tolower(prefix);
+	}
+
+	template <typename CharType>
+	bool stringBeginsWithCaseInsensitive(const std::basic_string<CharType>& s, CharType prefix) {
+		return (s.length() > 0) && std::tolower(s[0]) == std::tolower(prefix);
+	}
+
+	template <typename CharType>
+	bool stringBeginsWithCaseInsensitive(const std::basic_string<CharType>& s, const std::basic_string<CharType>& prefix) {
+		size_t prefixLength = prefix.length();
+
+		if (s.length() < prefixLength) {
+			return false;
+		}
+
+		return stringNCompareCaseInsensitive(s.c_str(), prefix.c_str(), prefixLength) == 0;
+	}
+
+	template <typename CharType>
+	bool stringBeginsWithCaseInsensitive(const CharType* s, const CharType* prefix) {
+		size_t sLength = stringLength(s);
+		size_t prefixLength = stringLength(prefix);
+
+		if (sLength < prefixLength) {
+			return false;
+		}
+
+		return stringNCompareCaseInsensitive(s, prefix, prefixLength) == 0;
+	}
+
+	bool stringBeginsWithCaseInsensitive(const std::string& s, const std::string& prefix);
+	bool stringBeginsWithCaseInsensitive(const std::wstring& s, const std::wstring& prefix);
+
+
+	template <typename CharType>
+	bool stringEndsWith(const std::basic_string_view<CharType>& s, CharType suffix) {
+		return (s.length() > 0) && s[s.length() - 1] == suffix;
+	}
+
+	template <typename CharType>
+	bool stringEndsWith(const std::basic_string<CharType>& s, CharType suffix) {
+		return (s.length() > 0) && s[s.length() - 1] == suffix;
+	}
+
+	template <typename CharType>
 	bool stringEndsWith(const CharType* s, const CharType* suffix) {
 		size_t sLength = stringLength(s);
 		size_t suffixLength = stringLength(suffix);
@@ -316,6 +400,59 @@ namespace StringUtilities{
 	bool stringEndsWith(const std::string& s, const std::string& suffix);
 	bool stringEndsWith(const std::wstring& s, const std::wstring& suffix);
 
+
+	template <typename CharType>
+	bool stringEndsWithCaseInsensitive(const std::basic_string_view<CharType>& s, CharType suffix) {
+		return (s.length() > 0) && std::tolower(s[s.length() - 1]) == std::tolower(suffix);
+	}
+
+	template <typename CharType>
+	bool stringEndsWithCaseInsensitive(const std::basic_string<CharType>& s, CharType suffix) {
+		return (s.length() > 0) && std::tolower(s[s.length() - 1]) == std::tolower(suffix);
+	}
+
+	template <typename CharType>
+	bool stringEndsWithCaseInsensitive(const CharType* s, const CharType* suffix) {
+		size_t sLength = stringLength(s);
+		size_t suffixLength = stringLength(suffix);
+
+		if (sLength < suffixLength) {
+			return false;
+		}
+
+		return stringNCompareCaseInsensitive(s + sLength - suffixLength, suffix, suffixLength) == 0;
+	}
+
+	bool stringEndsWithCaseInsensitive(const std::string& s, const std::string& suffix);
+	bool stringEndsWithCaseInsensitive(const std::wstring& s, const std::wstring& suffix);
+
+
+	const char* skipPrefix(const char* s, const char* prefix);
+	const char* skipPrefix(const std::string& s, const char* prefix);
+	const wchar_t* skipPrefix(const wchar_t* s, const wchar_t* prefix);
+	const wchar_t* skipPrefix(const std::wstring& s, const wchar_t* prefix);
+
+	const char* skipPrefix(const char* s, const char* prefix, bool& prefixFound);
+	const char* skipPrefix(const std::string& s, const char* prefix, bool& prefixFound);
+	const wchar_t* skipPrefix(const wchar_t* s, const wchar_t* prefix, bool& prefixFound);
+	const wchar_t* skipPrefix(const std::wstring& s, const wchar_t* prefix, bool& prefixFound);
+
+	void replaceAll(std::string& s, char charToReplace, char replacement);
+	void replaceAll(std::wstring& s, wchar_t charToReplace, wchar_t replacement);
+
+	std::string replaceAll(const std::string& s, char charToReplace, std::string replaceSequence);
+
+	// escape all occurences of charToEscape in s using escapeChar.
+	//    escapeChar("abc|test|123$", '|', '^')
+	// will return "abc^|test^|123$"
+	std::string escapeChar(const char* s, char charToEscape, char escapeChar);
+	std::string escapeChar(const std::string& s, char charToEscape, char escapeChar);
+
+	// escape all the given charsToEscape of s using escapeChar.
+	//    escapeChars("abc|test|123$", "|$", '^')
+	// will return "abc^|test^|123^$"
+	std::string escapeChars(const char* s, const char* charsToEscape, char escapeChar);
+	std::string escapeChars(const std::string& s, const char* charsToEscape, char escapeChar);
 
 	template <typename CharType> int tokenizeString(const std::basic_string<CharType>& toTokenize, const CharType* delimiters, std::vector<std::basic_string<CharType> >& tokens) {
 		std::basic_string<CharType> token;

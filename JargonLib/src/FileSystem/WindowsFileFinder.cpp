@@ -1,15 +1,170 @@
-
 #include "Jargon/FileSystem/WindowsFileFinder.h"
+#include "Jargon/FileSystem/Utilities.h"
 #include "Jargon/StringUtilities.h"
 #include "Jargon/System/WindowsUtilities.h"
+
+#include "Jargon/System/WindowsDefines.h"
+#include <windows.h>
 
 
 namespace Jargon{
 namespace FileSystem{
 
+	class WindowsFileFinder::WindowsFileFinderImpl {
+		public:
+			WindowsFileFinderImpl(Jargon::ErrorContext& errorContext) :
+				errorContext(errorContext)
+			{
+				findData = {};
+				findHandle = INVALID_HANDLE_VALUE;
+				lastErrorCode = NO_ERROR;
+			}
+
+			~WindowsFileFinderImpl() {
+				stop();
+			}
+
+			bool start(const std::string_view& pathExpression) {
+				stop();
+
+				pathExpressionWide = Jargon::StringUtilities::utf8ToWide(pathExpression);
+
+				findHandle = ::FindFirstFileW(pathExpressionWide.c_str(), &findData);
+
+				if (findHandle == INVALID_HANDLE_VALUE) {
+					DWORD error = GetLastError();
+					if (error != ERROR_NO_MORE_FILES) {
+						setWindowsError("Directory read failed", error);
+						return false;
+					}
+				} else {
+					skipDotDirectories();
+				}
+
+				return true;
+			}
+
+			bool start(const std::wstring_view& pathExpression) {
+				stop();
+
+				pathExpressionWide = pathExpression;
+
+				findHandle = ::FindFirstFileW(pathExpressionWide.c_str(), &findData);
+
+				if (findHandle == INVALID_HANDLE_VALUE) {
+					DWORD error = GetLastError();
+					if (error != ERROR_NO_MORE_FILES) {
+						setWindowsError("Directory read failed", error);
+						return false;
+					}
+				} else {
+					skipDotDirectories();
+				}
+
+				return true;
+			}
+
+			void stop() {
+				if (findHandle != INVALID_HANDLE_VALUE) {
+					FindClose(findHandle);
+				}
+
+				findData = {};
+				findHandle = INVALID_HANDLE_VALUE;
+				lastErrorCode = NO_ERROR;
+				errorContext.clearLastError();
+			}
+
+			bool getCurrentFilename(std::string& filenameOut) {
+				if (findHandle == INVALID_HANDLE_VALUE) {
+					return false;
+				}
+				filenameOut = Jargon::StringUtilities::wideToUtf8(findData.cFileName);
+				return true;
+			}
+
+			bool getCurrentFilename(std::wstring& filenameOut) {
+				if (findHandle == INVALID_HANDLE_VALUE) {
+					return false;
+				}
+				filenameOut = findData.cFileName;
+				return true;
+			}
+
+			bool advance() {
+				if (findHandle == INVALID_HANDLE_VALUE) {
+					return false;
+				}
+
+				if (!findNextFile()) {
+					return false;
+				}
+
+				if (!skipDotDirectories()) {
+					return false;
+				}
+
+				return true;
+			}
+
+			DWORD getLastErrorCode() const {
+				return lastErrorCode;
+			}
+
+		private:
+			Jargon::ErrorContext& errorContext;
+			WIN32_FIND_DATAW findData;
+			HANDLE findHandle;
+			DWORD lastErrorCode;
+			std::wstring pathExpressionWide;
+
+			bool skipDotDirectories() {
+				if (findHandle == INVALID_HANDLE_VALUE) {
+					return false;
+				}
+
+				while (Jargon::StringUtilities::stringEqual(L".", findData.cFileName) || Jargon::StringUtilities::stringEqual(L"..", findData.cFileName)) {
+					if (!findNextFile()) {
+						return false;
+					}
+				}
+
+				return true;
+			}
+
+			bool findNextFile() {
+				if (FindNextFileW(findHandle, &findData) == 0) {
+					const DWORD error = GetLastError();
+
+					if (error != ERROR_NO_MORE_FILES) {
+						setWindowsError("Directory read failed", error);
+					}
+
+					if (findHandle != INVALID_HANDLE_VALUE) {
+						FindClose(findHandle);
+					}
+
+					findData = {};
+					findHandle = INVALID_HANDLE_VALUE;
+
+					return false;
+				}
+
+				return true;
+			}
+
+			void setWindowsError(const char* message, DWORD errorCode) {
+				lastErrorCode = errorCode;
+				std::string systemMessage = Jargon::System::getWindowsErrorMessage(errorCode);
+				errorContext.setLastError("%s on %S : %s", message, Jargon::FileSystem::skipLongPathPrefix(pathExpressionWide), systemMessage.c_str());
+			}
+	};
+
 	WindowsFileFinder::WindowsFileFinder() {
-		findData = {};
-		findHandle = INVALID_HANDLE_VALUE;
+		impl = new WindowsFileFinderImpl(*this);
+	}
+
+	WindowsFileFinder::~WindowsFileFinder() {
 	}
 
 	bool WindowsFileFinder::start(const char* pathExpression) {
@@ -21,104 +176,39 @@ namespace FileSystem{
 	}
 
 	bool WindowsFileFinder::start(const std::string_view& pathExpression){
-		stop();
+		return impl->start(pathExpression);
+	}
 
-		this->pathExpression = pathExpression;
+	bool WindowsFileFinder::start(const wchar_t* pathExpression) {
+		return start(std::wstring_view(pathExpression));
+	}
 
-		std::wstring findPath = Jargon::StringUtilities::utf8ToWide(pathExpression);
-		findHandle = ::FindFirstFileW(findPath.c_str(), &findData);
+	bool WindowsFileFinder::start(const std::wstring& pathExpression) {
+		return start(std::wstring_view(pathExpression));
+	}
 
-		if (findHandle == INVALID_HANDLE_VALUE) {
-			DWORD error = GetLastError();
-			if (error != ERROR_NO_MORE_FILES) {
-				setWindowsError("FindFirstFile() failed", error);
-				return false;
-			}
-		} else {
-			skipDotDirectories();
-		}
-
-		return true;
+	bool WindowsFileFinder::start(const std::wstring_view& pathExpression) {
+		return impl->start(pathExpression);
 	}
 
 	void WindowsFileFinder::stop() {
-		if (findHandle != INVALID_HANDLE_VALUE) {
-			FindClose(findHandle);
-		}
-
-		pathExpression.clear();
-		findData = {};
-		findHandle = INVALID_HANDLE_VALUE;
-		clearLastError();
-	}
-
-	WindowsFileFinder::~WindowsFileFinder(){
-		stop();
+		impl->stop();
 	}
 
 	bool WindowsFileFinder::getCurrentFilename(std::string& filenameOut) {
-		if (findHandle == INVALID_HANDLE_VALUE) {
-			return false;
-		}
-		filenameOut = Jargon::StringUtilities::wideToUtf8(findData.cFileName);
-		return true;
+		return impl->getCurrentFilename(filenameOut);
+	}
+
+	bool WindowsFileFinder::getCurrentFilename(std::wstring& filenameOut) {
+		return impl->getCurrentFilename(filenameOut);
 	}
 
 	bool WindowsFileFinder::advance() {
-		if (findHandle == INVALID_HANDLE_VALUE) {
-			return false;
-		}
-
-		if (!findNextFile()) {
-			return false;
-		}
-
-		if (!skipDotDirectories()) {
-			return false;
-		}
-
-		return true;
+		return impl->advance();
 	}
 
-	bool WindowsFileFinder::skipDotDirectories() {
-		if (findHandle == INVALID_HANDLE_VALUE) {
-			return false;
-		}
-
-		while (Jargon::StringUtilities::stringEqual(L".", findData.cFileName) || Jargon::StringUtilities::stringEqual(L"..", findData.cFileName)) {
-			if (!findNextFile()) {
-				return false;
-			}
-		}
-
-		return true;
-	}
-
-	bool WindowsFileFinder::findNextFile() {
-		if (FindNextFileW(findHandle, &findData) == 0) {
-			const DWORD error = GetLastError();
-
-			if (error != ERROR_NO_MORE_FILES) {
-				setWindowsError("FindNextFile() failed", error);
-			}
-
-			if (findHandle != INVALID_HANDLE_VALUE) {
-				FindClose(findHandle);
-			}
-
-			findData = {};
-			findHandle = INVALID_HANDLE_VALUE;
-
-			return false;
-		}
-
-		return true;
-	}
-
-	void WindowsFileFinder::setWindowsError(const char* message, DWORD errorCode) {
-		std::string systemMessage = Jargon::System::getWindowsErrorMessage(errorCode);
-		setLastError("%s reading %s : %s", message, pathExpression.c_str(), systemMessage.c_str());
-		
+	uint32_t WindowsFileFinder::getLastErrorCode() const {
+		return (uint32_t)impl->getLastErrorCode();
 	}
 
 }

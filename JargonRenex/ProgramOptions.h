@@ -6,8 +6,10 @@
 #include <string>
 #include <vector>
 
+
 class ProgramOptions{
 	public:
+		typedef int (*PrintFunction)(_Printf_format_string_ const wchar_t*, ...);
 
 		enum PrintMode {
 			PrintMode_Quiet   = 0,
@@ -20,14 +22,14 @@ class ProgramOptions{
 		ProgramOptions(Jargon::ErrorContext& errorContext);
 		~ProgramOptions();
 
-		bool process(int argc, const char** argv);
+		bool process(int argc, const wchar_t** argv);
 		bool verify() const;
-		void printSummary(FILE* destination) const;
+		void printSummary(PrintFunction printFunction) const;
 
 		bool useVerboseOutput() const;
 		bool useNormalOutput() const;
 
-		std::string exeName;
+		std::wstring exeName;
 		bool showHelp = false;
 		PrintMode printMode = PrintMode_Normal;
 		bool continueOnError = false;
@@ -40,9 +42,9 @@ class ProgramOptions{
 		bool allowMove = false;
 		bool createFolders = false;
 		bool logFileEnabled = true;
-		std::string regex;
-		std::string logFilename;
-		std::vector<std::string> inputFilenames;
+		std::wstring regex;
+		std::wstring logFilename;
+		std::vector<std::wstring> inputFilenames;
 	private:
 		Jargon::ErrorContext & errorContext;
 };

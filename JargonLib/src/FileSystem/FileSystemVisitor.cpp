@@ -22,5 +22,9 @@ namespace FileSystem{
 		return true;
 	}
 
+	bool FileSystemVisitor::onError(const ErrorContext& errorContext, uint32_t windowsErrorCode) {
+		return false;
+	}
+
 }
 }

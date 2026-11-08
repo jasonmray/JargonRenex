@@ -25,6 +25,9 @@ namespace FileSystem{
 			// check hasError() to see if an error occurred.
 			bool getCurrentFilename(std::string& filenameOut);
 
+			// same as getCurrentFilename(), but prepends the value of getPath()
+			bool getCurrentFilenameWithPath(std::string& filepathOut);
+
 			// returns false on error or if there is no next file.
 			// check hasError() to see if an error occurred.
 			bool advance();

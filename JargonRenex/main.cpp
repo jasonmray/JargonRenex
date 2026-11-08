@@ -3,11 +3,15 @@
 #include "ProgramVersion.h"
 
 #include "Jargon/ErrorContext.h"
+#include "Jargon/StandardIO.h"
+#include "Jargon/System/Utilities.h"
 
 #include <cstdio>
 
 
-int main(int argc, const char ** argv){
+int wmain(int argc, const wchar_t* argv[], const wchar_t* envp[]) {
+	Jargon::StandardIO::setConsoleUTF8();
+
 	Jargon::ErrorContext errorContext;
 	ProgramOptions programOptions(errorContext);
 
@@ -29,7 +33,7 @@ int main(int argc, const char ** argv){
 	if (programOptions.useVerboseOutput()) {
 		// print version banner and final program options
 		fprintf(stdout, "\nJargon Renex v%s\n\n", ProgramVersion::VersionString);
-		programOptions.printSummary(stdout);
+		programOptions.printSummary(Jargon::StandardIO::printMessage);
 	}
 
 	JargonRenex app(programOptions, errorContext);

@@ -65,10 +65,10 @@ namespace Jargon{
 		try {
 			result = boost::regex_replace(toProcess, regex, replacePattern, flags);
 		} catch (std::exception& e) {
-			errorContext.setLastError("Failed to run regex replace pattern %s %s: %s", regex.str(), replacePattern, e.what());
+			errorContext.setLastError("Failed to run regex replace pattern %hs %hs: %hs", regex.str().c_str(), replacePattern, e.what());
 			return false;
 		} catch (...) {
-			errorContext.setLastError("Failed to run regex replace pattern %s %s", regex.str(), replacePattern);
+			errorContext.setLastError("Failed to run regex replace pattern %hs %hs", regex.str().c_str(), replacePattern);
 			return false;
 		}
 
@@ -80,10 +80,10 @@ namespace Jargon{
 		try {
 			return boost::regex_match(toProcess, regex, flags);
 		} catch (std::exception& e) {
-			errorContext.setLastError("Failed to run regex match pattern %s : %s", regex.str(), e.what());
+			errorContext.setLastError("Failed to run regex match pattern %hs : %hs", regex.str().c_str(), e.what());
 			return false;
 		} catch (...) {
-			errorContext.setLastError("Failed to run regex match pattern %s", regex.str());
+			errorContext.setLastError("Failed to run regex match pattern %hs", regex.str().c_str());
 			return false;
 		}
 	}
@@ -97,10 +97,10 @@ namespace Jargon{
 				return false;
 			}
 		} catch (std::exception& e) {
-			errorContext.setLastError("Failed to run regex match pattern %s : %s", regex.str(), e.what());
+			errorContext.setLastError("Failed to run regex match pattern %hs : %hs", regex.str().c_str(), e.what());
 			return false;
 		} catch (...) {
-			errorContext.setLastError("Failed to run regex match pattern %s", regex.str());
+			errorContext.setLastError("Failed to run regex match pattern %hs", regex.str().c_str());
 			return false;
 		}
 		

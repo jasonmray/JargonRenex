@@ -21,11 +21,11 @@ class ActionLog {
 		void writeLine(const char* line);
 		void writeLine(const std::string& text);
 
-		void writeFormatted(const char* format, ...);
-		void writeFormattedVarArg(const char* format, va_list args);
+		void writeFormatted(_Printf_format_string_ const char* format, ...);
+		void writeFormattedVarArg(_Printf_format_string_ const char* format, va_list args);
 
-		void writeLineFormatted(const char* format, ...);
-		void writeLineFormattedVarArg(const char* format, va_list args);
+		void writeLineFormatted(_Printf_format_string_ const char* format, ...);
+		void writeLineFormattedVarArg(_Printf_format_string_ const char* format, va_list args);
 
 		void newLine();
 

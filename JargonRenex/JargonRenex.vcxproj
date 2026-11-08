@@ -161,25 +161,31 @@
   <ItemGroup>
     <ClCompile Include="ActionLog.cpp" />
     <ClCompile Include="BoostRegexImpl.cpp" />
+    <ClCompile Include="BoostRegexWideImpl.cpp" />
     <ClCompile Include="JargonRenex.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MatchRegex.cpp" />
+    <ClCompile Include="MatchRegexWide.cpp" />
     <ClCompile Include="PerlReplaceExpression.cpp" />
     <ClCompile Include="ProgramOptions.cpp" />
     <ClCompile Include="ProgramVersion.cpp" />
     <ClCompile Include="RenexResults.cpp" />
     <ClCompile Include="ReplaceRegex.cpp" />
+    <ClCompile Include="ReplaceRegexWide.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="ActionLog.h" />
     <ClInclude Include="BoostRegexImpl.h" />
+    <ClInclude Include="BoostRegexWideImpl.h" />
     <ClInclude Include="JargonRenex.h" />
     <ClInclude Include="MatchRegex.h" />
+    <ClInclude Include="MatchRegexWide.h" />
     <ClInclude Include="PerlReplaceExpression.h" />
     <ClInclude Include="ProgramOptions.h" />
     <ClInclude Include="ProgramVersion.h" />
     <ClInclude Include="RenexResults.h" />
     <ClInclude Include="ReplaceRegex.h" />
+    <ClInclude Include="ReplaceRegexWide.h" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\JargonLib\JargonLib.vcxproj">

@@ -5,6 +5,7 @@
 
 #include <algorithm>
 #include <cassert>
+#include <cctype>
 
 #include <strsafe.h>
 #include <windows.h>
@@ -96,6 +97,10 @@ namespace StringUtilities{
 		return iswspace(c) != 0;
 	}
 
+	bool caseInsensitiveCharEqualFunctor(char a, char b) {
+		return std::tolower(a) == std::tolower(b);
+	}
+
 	bool stringContains(const char* s, char c){
 		std::string_view sv(s);
 		return sv.find_first_of(c) != std::string_view::npos;
@@ -134,7 +139,36 @@ namespace StringUtilities{
 		return sv.find_first_not_of(expected) == std::wstring_view::npos;
 	}
 
-	std::string format(const char * formatString, ...) {
+	bool stringContainsStringCaseInsensitive(const std::string& s, const std::string& toFind) {
+		auto it = std::search(
+			s.begin(), s.end(),
+			toFind.begin(), toFind.end(),
+			caseInsensitiveCharEqualFunctor
+		);
+		return it != s.end();
+	}
+
+	bool stringContainsStringCaseInsensitive(const std::string_view& s, const std::string_view& toFind) {
+		auto it = std::search(
+			s.begin(), s.end(),
+			toFind.begin(), toFind.end(),
+			caseInsensitiveCharEqualFunctor
+		);
+		return it != s.end();
+	}
+
+	bool stringContainsStringCaseInsensitive(const std::string_view& s, const char* toFind) {
+		std::string_view toFindView(toFind);
+		return stringContainsStringCaseInsensitive(s, toFindView);
+	}
+
+	bool stringContainsStringCaseInsensitive(const std::string& s, const char* toFind) {
+		std::string_view sView(s);
+		std::string_view toFindView(toFind);
+		return stringContainsStringCaseInsensitive(sView, toFindView);
+	}
+
+	std::string format(_Printf_format_string_ const char * formatString, ...) {
 		va_list args;
 		va_start(args, formatString);
 		std::string s(formatVarArgs(formatString, args));
@@ -142,7 +176,7 @@ namespace StringUtilities{
 		return s;
 	}
 
-	std::string formatVarArgs(const char * formatString, va_list args) {
+	std::string formatVarArgs(_Printf_format_string_ const char * formatString, va_list args) {
 		size_t stringLength = _vscprintf(formatString, args);
 		std::string result;
 		result.resize(stringLength);
@@ -152,7 +186,7 @@ namespace StringUtilities{
 		return result;
 	}
 
-	std::wstring formatWide(const wchar_t* formatString, ...) {
+	std::wstring formatWide(_Printf_format_string_ const wchar_t* formatString, ...) {
 		va_list args;
 		va_start(args, formatString);
 		std::wstring s(formatWideVarArgs(formatString, args));
@@ -160,7 +194,7 @@ namespace StringUtilities{
 		return s;
 	}
 
-	std::wstring formatWideVarArgs(const wchar_t* formatString, va_list args) {
+	std::wstring formatWideVarArgs(_Printf_format_string_ const wchar_t* formatString, va_list args) {
 		size_t stringLength = _vscwprintf(formatString, args);
 		std::wstring result;
 		result.resize(stringLength);
@@ -194,6 +228,35 @@ namespace StringUtilities{
 
 	std::string wideToUtf8(const std::wstring& wString) {
 		return wideToUtf8(wString.c_str(), wString.size());
+	}
+
+	std::string wideToUtf8(const std::wstring_view& wString) {
+		return wideToUtf8(wString.data(), wString.length());
+	}
+
+	std::wstring systemCodepageToWide(const char* ansiString) {
+		const int destSize = MultiByteToWideChar(CP_ACP, 0, ansiString, -1, NULL, 0);
+		assert(destSize > 0);
+
+		std::wstring wideString(destSize, 0);
+		MultiByteToWideChar(CP_ACP, 0, ansiString, -1, &wideString[0], destSize);
+
+		wideString.resize(destSize - 1);
+
+		return wideString;
+	}
+
+	std::wstring systemCodepageToWide(const std::string_view& ansiString) {
+		const int destSize = MultiByteToWideChar(CP_ACP, 0, ansiString.data(), (int)ansiString.length(), NULL, 0);
+		assert(destSize > 0);
+
+		std::wstring wideString(destSize, 0);
+		MultiByteToWideChar(CP_UTF8, MB_PRECOMPOSED, ansiString.data(), (int)ansiString.length(), &wideString[0], destSize);
+
+		// note: no resize(destSize - 1) here! MultiByteToWideChar behaves differently when the length you give
+		// it does not end on a null terminator.
+
+		return wideString;
 	}
 
 	std::wstring utf8ToWide(const char* utf8string) {
@@ -287,6 +350,18 @@ namespace StringUtilities{
 		return result;
 	}
 
+	std::string toLower(const std::string_view& s) {
+		std::string result(s);
+		std::transform(result.begin(), result.end(), result.begin(), std::tolower);
+		return result;
+	}
+
+	std::string toUpper(const std::string_view& s) {
+		std::string result(s);
+		std::transform(result.begin(), result.end(), result.begin(), std::toupper);
+		return result;
+	}
+
 	bool isEmptyOrWhitespace(const char* s) {
 		if (*s == '\0') {
 			return true;
@@ -366,6 +441,14 @@ namespace StringUtilities{
 		return stringBeginsWith<wchar_t>(s, prefix);
 	}
 
+	bool stringBeginsWithCaseInsensitive(const std::string& s, const std::string& prefix) {
+		return stringBeginsWithCaseInsensitive<char>(s, prefix);
+	}
+
+	bool stringBeginsWithCaseInsensitive(const std::wstring& s, const std::wstring& prefix) {
+		return stringBeginsWithCaseInsensitive<wchar_t>(s, prefix);
+	}
+
 	bool stringEndsWith(const std::string& s, const std::string& suffix) {
 		size_t suffixLength = suffix.length();
 		size_t stringLength = s.length();
@@ -386,6 +469,267 @@ namespace StringUtilities{
 		}
 
 		return stringNCompare(s.c_str() + sLength - suffixLength, suffix.c_str(), suffixLength) == 0;
+	}
+
+	bool stringEndsWithCaseInsensitive(const std::string& s, const std::string& suffix) {
+		size_t suffixLength = suffix.length();
+		size_t stringLength = s.length();
+
+		if (stringLength < suffixLength) {
+			return false;
+		}
+
+		return stringNCompareCaseInsensitive(s.c_str() + stringLength - suffixLength, suffix.c_str(), suffixLength) == 0;
+	}
+
+	bool stringEndsWithCaseInsensitive(const std::wstring& s, const std::wstring& suffix) {
+		size_t suffixLength = suffix.length();
+		size_t sLength = s.length();
+
+		if (sLength < suffixLength) {
+			return false;
+		}
+
+		return stringNCompareCaseInsensitive(s.c_str() + sLength - suffixLength, suffix.c_str(), suffixLength) == 0;
+	}
+
+	const char* skipPrefix(const char* s, const char* prefix) {
+		if (Jargon::StringUtilities::stringBeginsWith(s, prefix)) {
+			s += Jargon::StringUtilities::stringLength(prefix);
+		}
+
+		return s;
+	}
+
+	const char* skipPrefix(const std::string& s, const char* prefix) {
+		const char* result = s.c_str();
+
+		if (Jargon::StringUtilities::stringBeginsWith(s, prefix)) {
+			result += Jargon::StringUtilities::stringLength(prefix);
+		}
+
+		return result;
+	}
+
+	const wchar_t* skipPrefix(const wchar_t* s, const wchar_t* prefix) {
+		if (Jargon::StringUtilities::stringBeginsWith(s, prefix)) {
+			s += Jargon::StringUtilities::stringLength(prefix);
+		}
+
+		return s;
+	}
+
+	const wchar_t* skipPrefix(const std::wstring& s, const wchar_t* prefix) {
+		const wchar_t* result = s.c_str();
+
+		if (Jargon::StringUtilities::stringBeginsWith(s, prefix)) {
+			result += Jargon::StringUtilities::stringLength(prefix);
+		}
+
+		return result;
+	}
+
+
+
+	const char* skipPrefix(const char* s, const char* prefix, bool& prefixFound) {
+		prefixFound = Jargon::StringUtilities::stringBeginsWith(s, prefix);
+
+		if (prefixFound) {
+			s += Jargon::StringUtilities::stringLength(prefix);
+		}
+
+		return s;
+	}
+
+	const char* skipPrefix(const std::string& s, const char* prefix, bool& prefixFound) {
+		const char* result = s.c_str();
+
+		prefixFound = Jargon::StringUtilities::stringBeginsWith(s, prefix);
+
+		if (prefixFound) {
+			result += Jargon::StringUtilities::stringLength(prefix);
+		}
+
+		return result;
+	}
+
+	const wchar_t* skipPrefix(const wchar_t* s, const wchar_t* prefix, bool& prefixFound) {
+		prefixFound = Jargon::StringUtilities::stringBeginsWith(s, prefix);
+
+		if (prefixFound) {
+			s += Jargon::StringUtilities::stringLength(prefix);
+		}
+
+		return s;
+	}
+
+	const wchar_t* skipPrefix(const std::wstring& s, const wchar_t* prefix, bool& prefixFound) {
+		const wchar_t* result = s.c_str();
+
+		prefixFound = Jargon::StringUtilities::stringBeginsWith(s, prefix);
+
+		if (prefixFound) {
+			result += Jargon::StringUtilities::stringLength(prefix);
+		}
+
+		return result;
+	}
+
+	void replaceAll(std::string& s, char toFind, char replacement) {
+		std::replace(s.begin(), s.end(), toFind, replacement);
+	}
+
+	void replaceAll(std::wstring& s, wchar_t toFind, wchar_t replacement) {
+		std::replace(s.begin(), s.end(), toFind, replacement);
+	}
+
+	std::string replaceAll(const std::string& s, char toFind, std::string replaceSequence) {
+		auto needsReplace = [&](char c) {
+			return c == toFind;
+		};
+
+		const size_t toReplaceCount = std::count_if(s.begin(), s.end(), needsReplace);
+
+		if (toReplaceCount == 0) {
+			return s;
+		}
+
+		std::string result;
+		result.reserve(s.length() + toReplaceCount * replaceSequence.length());
+
+		std::for_each(
+			s.begin(),
+			s.end(),
+			[&](char c) {
+
+				if (needsReplace(c)) {
+					result.append(replaceSequence);
+				} else {
+					result.push_back(c);
+				}
+			}
+		);
+
+		return result;
+	}
+
+	std::string escapeChar(const char* s, char charToEscape, char escapeChar) {
+		const std::string_view sView(s);
+
+		auto needsEscape = [&](char c) {
+			return c == charToEscape;
+		};
+
+		const size_t toEscapeCount = std::count_if(sView.begin(), sView.end(), needsEscape);
+
+		if (toEscapeCount == 0) {
+			return s;
+		}
+
+		std::string result;
+		result.reserve(sView.length() + toEscapeCount);
+
+		std::for_each(
+			sView.begin(),
+			sView.end(),
+			[&](char c) {
+				if (needsEscape(c)) {
+					result.push_back(escapeChar);
+				}
+				result.push_back(c);
+			}
+		);
+
+		return result;
+	}
+
+	std::string escapeChar(const std::string& s, char charToEscape, char escapeChar) {
+		auto needsEscape = [&](char c) {
+			return c == charToEscape;
+		};
+
+		const size_t toEscapeCount = std::count_if(s.begin(), s.end(), needsEscape);
+
+		if (toEscapeCount == 0) {
+			return s;
+		}
+
+		std::string result;
+		result.reserve(s.length() + toEscapeCount);
+
+		std::for_each(
+			s.begin(),
+			s.end(),
+			[&](char c) {
+				if (needsEscape(c)) {
+					result.push_back(escapeChar);
+				}
+				result.push_back(c);
+			}
+		);
+
+		return result;
+	}
+
+	std::string escapeChars(const char* s, const char* charsToEscape, char escapeChar) {
+		const std::string_view sView(s);
+		const std::string_view charsToEscapeView(charsToEscape);
+
+		auto needsEscape = [&](char c) {
+			return charsToEscapeView.find(c) != std::string_view::npos;
+		};
+
+		const size_t toEscapeCount = std::count_if(sView.begin(), sView.end(), needsEscape);
+
+		if (toEscapeCount == 0) {
+			return s;
+		}
+
+		std::string result;
+		result.reserve(sView.length() + toEscapeCount);
+
+		std::for_each(
+			sView.begin(),
+			sView.end(),
+			[&](char c) {
+				if (needsEscape(c)) {
+					result.push_back(escapeChar);
+				}
+				result.push_back(c);
+			}
+		);
+
+		return result;
+	}
+
+	std::string escapeChars(const std::string& s, const char* charsToEscape, char escapeChar) {
+		const std::string_view charsToEscapeView(charsToEscape);
+
+		auto needsEscape = [&](char c) {
+			return charsToEscapeView.find(c) != std::string_view::npos;
+		};
+
+		const size_t toEscapeCount = std::count_if(s.begin(), s.end(), needsEscape);
+
+		if (toEscapeCount == 0) {
+			return s;
+		}
+
+		std::string result;
+		result.reserve(s.length() + toEscapeCount);
+
+		std::for_each(
+			s.begin(),
+			s.end(),
+			[&](char c) {
+				if (needsEscape(c)) {
+					result.push_back(escapeChar);
+				}
+				result.push_back(c);
+			}
+		);
+
+		return result;
 	}
 
 

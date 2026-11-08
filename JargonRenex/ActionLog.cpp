@@ -15,7 +15,7 @@ ActionLog::~ActionLog(){
 bool ActionLog::open() {
 	if (enabled) {
 		if (!logFile.openFile(programOptions.logFilename.c_str(), Jargon::FileSystem::BinaryFileWriter::OpenMode_Append)) {
-			errorContext.setLastError("Failed to open log file for writing: %s", programOptions.logFilename.c_str());
+			errorContext.setLastError("Failed to open log file for writing: %ls", programOptions.logFilename.c_str());
 			return false;
 		}
 	}
@@ -53,7 +53,7 @@ void ActionLog::writeLine(const std::string& text) {
 	}
 }
 
-void ActionLog::writeFormatted(const char* format, ...) {
+void ActionLog::writeFormatted(_Printf_format_string_ const char* format, ...) {
 	if (enabled) {
 		va_list args;
 		va_start(args, format);
@@ -62,13 +62,13 @@ void ActionLog::writeFormatted(const char* format, ...) {
 	}
 }
 
-void ActionLog::writeFormattedVarArg(const char* format, va_list args) {
+void ActionLog::writeFormattedVarArg(_Printf_format_string_ const char* format, va_list args) {
 	if (enabled) {
 		textWriter.writeFormattedVarArg(format, args);
 	}
 }
 
-void ActionLog::writeLineFormatted(const char* format, ...) {
+void ActionLog::writeLineFormatted(_Printf_format_string_ const char* format, ...) {
 	if (enabled) {
 		va_list args;
 		va_start(args, format);
@@ -77,7 +77,7 @@ void ActionLog::writeLineFormatted(const char* format, ...) {
 	}
 }
 
-void ActionLog::writeLineFormattedVarArg(const char* format, va_list args) {
+void ActionLog::writeLineFormattedVarArg(_Printf_format_string_ const char* format, va_list args) {
 	if (enabled) {
 		textWriter.writeLineFormattedVarArg(format, args);
 	}

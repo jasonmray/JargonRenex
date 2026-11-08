@@ -94,9 +94,19 @@ namespace Jargon{
 				swapTarget(nullptr);
 			}
 
+			ScopedPointer<TargetClass, ReleasePolicyClass>& operator=(TargetClass* toCopy) {
+				swapTarget(toCopy);
+				return *this;
+			}
+
 			template<class T>
 			ScopedPointer<TargetClass, ReleasePolicyClass> & operator=( T * toCopy ){
 				swapTarget(toCopy);
+				return *this;
+			}
+
+			ScopedPointer<TargetClass, ReleasePolicyClass>& operator=(ScopedPointer<TargetClass, ReleasePolicyClass>& toCopy) {
+				swapTarget(toCopy.releaseOwnership());
 				return *this;
 			}
 
@@ -164,7 +174,7 @@ namespace Jargon{
 				return m_target >= pointer;
 			}
 
-		private:
+		protected:
 			TargetClass * m_target;
 
 			void releaseTarget(){
@@ -221,9 +231,19 @@ namespace Jargon{
 				swapTarget(nullptr);
 			}
 
+			ScopedPointer<void, ReleasePolicyClass>& operator=(void * toCopy) {
+				swapTarget(toCopy);
+				return *this;
+			}
+
 			template<class T>
 			ScopedPointer<void, ReleasePolicyClass> & operator=( T * toCopy ){
 				swapTarget(toCopy);
+				return *this;
+			}
+
+			ScopedPointer<void, ReleasePolicyClass>& operator=(ScopedPointer<void, ReleasePolicyClass>& toCopy) {
+				swapTarget(toCopy.releaseOwnership());
 				return *this;
 			}
 
@@ -286,7 +306,7 @@ namespace Jargon{
 				return m_target >= pointer;
 			}
 
-		private:
+		protected:
 			void* m_target;
 
 			void releaseTarget(){

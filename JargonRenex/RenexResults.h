@@ -7,8 +7,8 @@
 namespace Jargon{
 
 	struct FileRename {
-		std::string oldFilename;
-		std::string newFilename;
+		std::wstring oldFilename;
+		std::wstring newFilename;
 	};
 
 	class RenexResults{

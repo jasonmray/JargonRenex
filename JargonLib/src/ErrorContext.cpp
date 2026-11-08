@@ -21,14 +21,14 @@ namespace Jargon{
 		return lastError.c_str();
 	}
 
-	void ErrorContext::setLastError(const char* formatString, ...) {
+	void ErrorContext::setLastError(_Printf_format_string_ const char* formatString, ...) {
 		va_list args;
 		va_start(args, formatString);
 		lastError = Jargon::StringUtilities::formatVarArgs(formatString, args);
 		va_end(args);
 	}
 
-	void ErrorContext::setLastErrorVarArgs(const char* formatString, va_list args) {
+	void ErrorContext::setLastErrorVarArgs(_Printf_format_string_ const char* formatString, va_list args) {
 		lastError = Jargon::StringUtilities::formatVarArgs(formatString, args);
 	}
 

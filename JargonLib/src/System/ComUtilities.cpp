@@ -26,5 +26,12 @@ namespace System{
 			toRelease->Release();
 		}
 	}
+
+	void CoTaskMemReleasePolicy::Release(void* toRelease) {
+		if (toRelease) {
+			CoTaskMemFree(toRelease);
+		}
+	}
+
 }
 }

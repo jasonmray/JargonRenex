@@ -12,19 +12,19 @@ namespace Jargon{
 			PerlReplaceExpression(Jargon::ErrorContext& errorContext);
 			~PerlReplaceExpression();
 
-			bool parse(const char* expression);
-			bool parse(const std::string& expression);
+			bool parse(const wchar_t* expression);
+			bool parse(const std::wstring& expression);
 
-			const std::string& getMatchPattern() const;
-			const std::string& getReplacePattern() const;
-			const std::string& getModifiers() const;
+			const std::wstring& getMatchPattern() const;
+			const std::wstring& getReplacePattern() const;
+			const std::wstring& getModifiers() const;
 
 		private:
 			Jargon::ErrorContext& errorContext;
 
-			std::string matchPattern;
-			std::string replacePattern;
-			std::string modifiers;
+			std::wstring matchPattern;
+			std::wstring replacePattern;
+			std::wstring modifiers;
 	};
 
 }

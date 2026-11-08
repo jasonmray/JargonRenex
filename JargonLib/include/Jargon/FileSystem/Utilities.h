@@ -43,8 +43,17 @@ namespace FileSystem{
 	bool getFileSize(const char* filename, int64_t* sizeOut);
 	bool getFileSize(const wchar_t* filename, int64_t* sizeOut);
 
+	bool getFileModifiedTimeUnixEpochSeconds(const char* filename, int64_t* unixSecondsOut);
+	bool getFileModifiedTimeUnixEpochSeconds(const wchar_t* filename, int64_t* unixSecondsOut);
+
+	bool getFileHiddenAttribute(const char* filename, bool* hiddenFlagOut);
+	bool getFileHiddenAttribute(const wchar_t* filename, bool* hiddenFlagOut);
+
 	std::string addLongPathPrefixIfNeeded(const std::string& filename);
 	std::wstring addLongPathPrefixIfNeeded(const std::wstring& filename);
+
+	void ensureTrailingSlash(std::string& path);
+	void ensureTrailingSlash(std::wstring& path);
 
 	std::string ensureLongPathPrefix(const char* filename);
 	std::string ensureLongPathPrefix(const std::string& filename);
@@ -59,74 +68,125 @@ namespace FileSystem{
 	void globFiles(const char* pattern, std::vector<std::string>& files, bool returnAbsolutePaths = true);
 	void globFiles(const wchar_t* pattern, std::vector<std::wstring>& files, bool returnAbsolutePaths = true);
 
+
+	template<typename CharType>
+	class FilepathTraits {
+		public:
+			static const CharType Dot = '.';
+			static constexpr CharType PathSeparators[] = { '\\','/',0 };
+	};
+
+
 	// filename without path or extension
-	std::string_view getBaseFilename(const char* sourceFilename);
+	template<class CharType>
+	std::basic_string_view<CharType> getBaseFilename(const CharType* sourceFilename) {
+		std::basic_string_view<CharType> filenameView(sourceFilename);
+
+		size_t filenameStart = 0;
+		size_t filenameEnd = 0;
+
+		size_t slashLocation = filenameView.find_last_of(FilepathTraits<CharType>::PathSeparators);
+		if (slashLocation != std::basic_string_view<CharType>::npos) {
+			filenameStart = slashLocation + 1;
+		}
+
+		size_t dotLocation = std::basic_string_view<CharType>(sourceFilename + filenameStart).find_last_of(FilepathTraits<CharType>::Dot);
+		if (dotLocation == std::basic_string_view<CharType>::npos) {
+			filenameEnd = filenameView.length();
+		} else {
+			filenameEnd = filenameStart + dotLocation;
+		}
+
+		return filenameView.substr(filenameStart, filenameEnd - filenameStart);
+	}
 
 	// filename without path, with extension
-	std::string_view getFilenameComponent(const char* filePath);
+	template<class CharType>
+	std::basic_string_view<CharType> getFilenameComponent(const CharType* filePath) {
+		assert(filePath != nullptr);
+
+		std::basic_string_view<CharType> filePathView(filePath);
+		size_t slashLocation = filePathView.find_last_of(FilepathTraits<CharType>::PathSeparators);
+
+		if (slashLocation != std::basic_string_view<CharType>::npos) {
+			return filePathView.substr(slashLocation + 1);
+		} else {
+			return filePathView;
+		}
+	}
 
 	// includes trailing slash if present
-	std::string_view getPathComponent(const char* filePath);
+	template<class CharType>
+	std::basic_string_view<CharType> getPathComponent(const CharType* filePath) {
+		assert(filePath != nullptr);
 
-	std::string_view getFileExtension(const char* filename);
+		std::basic_string_view<CharType> filePathView(filePath);
+		size_t slashLocation = filePathView.find_last_of(FilepathTraits<CharType>::PathSeparators);
+
+		if (slashLocation != std::basic_string_view<CharType>::npos) {
+			return filePathView.substr(0, slashLocation + 1);
+		} else {
+			return std::basic_string_view<CharType>();
+		}
+	}
+
+	template<class CharType>
+	std::basic_string_view<CharType> getFileExtension(const CharType* filename) {
+		std::string_view filenameView(filename);
+
+		size_t extensionStart = 0;
+
+		size_t dotLocation = filenameView.find_last_of(FilepathTraits<CharType>::Dot);
+		if (dotLocation == std::basic_string_view<CharType>::npos) {
+			extensionStart = 0;
+		} else {
+			extensionStart = dotLocation + 1;
+		}
+
+		return filenameView.substr(extensionStart, filenameView.length());
+	}
 
 	// remove dot and extension
-	std::string_view removeFileExtension(const char* filename);
+	template<class CharType>
+	std::basic_string_view<CharType> removeFileExtension(const CharType* filename) {
+		std::string_view filenameView(filename);
+
+		size_t dotLocation = filenameView.find_last_of(FilepathTraits<CharType>::Dot);
+		if (dotLocation == std::basic_string_view<CharType>::npos) {
+			return filenameView;
+		} else {
+			return filenameView.substr(0, dotLocation);
+		}
+	}
 
 
 	// extract the path and filename+extension.
 	// if a path is present, it will be included in filenameOut.
-	template<class StringClass>
-	void extractPathAndFilename(const std::string_view& filenameView, StringClass& pathOut, StringClass& filenameAndExtensionOut) {
+	template<class CharType, class StringClass>
+	void extractPathAndFilename(const std::basic_string_view<CharType>& filenameView, StringClass& pathOut, StringClass& filenameAndExtensionOut) {
 		const size_t stringEnd = filenameView.length();
 		const size_t pathStart = 0;
 		size_t filenameStart = pathStart;
 
-		const size_t slashLocation = filenameView.find_last_of("\\/");
-		if (slashLocation != std::string_view::npos) {
+		const size_t slashLocation = filenameView.find_last_of(FilepathTraits<CharType>::PathSeparators);
+		if (slashLocation != std::basic_string_view<CharType>::npos) {
 			filenameStart = slashLocation + 1;
 		}
 
 		const size_t pathLength = filenameStart - pathStart;
 		const size_t filenameLength = stringEnd - filenameStart;
 
-
 		pathOut = filenameView.substr(0, filenameStart);
 		filenameAndExtensionOut = filenameView.substr(filenameStart, filenameLength);
 	}
-	template<class StringClass>
-	void extractPathAndFilename(const char* filename, StringClass& pathOut, StringClass& filenameAndExtensionOut) {
-		std::string_view filenameView(filename);
+	template<class CharType, class StringClass>
+	void extractPathAndFilename(const CharType* filename, StringClass& pathOut, StringClass& filenameAndExtensionOut) {
+		std::basic_string_view<CharType> filenameView(filename);
 
 		extractPathAndFilename(filenameView, pathOut, filenameAndExtensionOut);
 	}
 	void extractPathAndFilename(const char* filename, std::string& pathOut, std::string& filenameAndExtensionOut);
 	void extractPathAndFilename(const char* filename, std::string_view& pathOut, std::string_view& filenameAndExtensionOut);
-
-	template<class WStringClass>
-	void extractPathAndFilename(const std::wstring_view& filenameView, WStringClass& pathOut, WStringClass& filenameAndExtensionOut) {
-		const size_t stringEnd = filenameView.length();
-		const size_t pathStart = 0;
-		size_t filenameStart = pathStart;
-
-		const size_t slashLocation = filenameView.find_last_of(L"\\/");
-		if (slashLocation != std::string_view::npos) {
-			filenameStart = slashLocation + 1;
-		}
-
-		const size_t pathLength = filenameStart - pathStart;
-		const size_t filenameLength = stringEnd - filenameStart;
-
-
-		pathOut = filenameView.substr(0, filenameStart);
-		filenameAndExtensionOut = filenameView.substr(filenameStart, filenameLength);
-	}
-	template<class WStringClass>
-	void extractPathAndFilename(const wchar_t* filename, WStringClass& pathOut, WStringClass& filenameAndExtensionOut) {
-		std::wstring_view filenameView(filename);
-
-		extractPathAndFilename(filenameView, pathOut, filenameAndExtensionOut);
-	}
 	void extractPathAndFilename(const wchar_t* filename, std::wstring& pathOut, std::wstring& filenameAndExtensionOut);
 	void extractPathAndFilename(const wchar_t* filename, std::wstring_view& pathOut, std::wstring_view& filenameAndExtensionOut);
 
@@ -134,15 +194,15 @@ namespace FileSystem{
 	// extract filename and extension components.
 	// if a path is present, it will be included in filenameOut.
 	// if an extension is present, dottedExtensionOut will include its dot
-	template<class StringClass>
-	void extractFilenameAndExtension(const std::string_view& filenameView, StringClass& filenameOut, StringClass& dottedExtensionOut) {
+	template<class CharType, class StringClass>
+	void extractFilenameAndExtension(const std::basic_string_view<CharType>& filenameView, StringClass& filenameOut, StringClass& dottedExtensionOut) {
 		const size_t stringEnd = filenameView.length();
 		const size_t filenameStart = 0;
 
 		size_t extensionStart = stringEnd;
 
-		const size_t dotLocation = filenameView.find_last_of('.');
-		if (dotLocation != std::string_view::npos) {
+		const size_t dotLocation = filenameView.find_last_of(FilepathTraits<CharType>::Dot);
+		if (dotLocation != std::basic_string_view<CharType>::npos) {
 			extensionStart = dotLocation;
 		}
 
@@ -152,28 +212,30 @@ namespace FileSystem{
 		filenameOut = filenameView.substr(filenameStart, filenameLength);
 		dottedExtensionOut = filenameView.substr(extensionStart, extensionLength);
 	}
-	template<class StringClass>
-	void extractFilenameAndExtension(const char* filename, StringClass& filenameOut, StringClass& dottedExtensionOut) {
-		std::string_view filenameView(filename);
+	template<class CharType, class StringClass>
+	void extractFilenameAndExtension(const CharType* filename, StringClass& filenameOut, StringClass& dottedExtensionOut) {
+		std::basic_string_view<CharType> filenameView(filename);
 
 		extractFilenameAndExtension(filenameView, filenameOut, dottedExtensionOut);
 	}
 	void extractFilenameAndExtension(const char* filename, std::string_view& filenameOut, std::string_view& dottedExtensionOut);
 	void extractFilenameAndExtension(const char* filename, std::string& filenameOut, std::string& dottedExtensionOut);
+	void extractFilenameAndExtension(const wchar_t* filename, std::wstring_view& filenameOut, std::wstring_view& dottedExtensionOut);
+	void extractFilenameAndExtension(const wchar_t* filename, std::wstring& filenameOut, std::wstring& dottedExtensionOut);
 
 
 	// extract path, filename and extension components.
 	// if a path is present, pathOut will include its trailing slash.
 	// filenameOut will receive the base filename
 	// if an extension is present, dottedExtensionOut will include its dot
-	template<class StringClass>
-	void extractPathFilenameAndExtension(const std::string_view& filenameView, StringClass& pathOut, StringClass& filenameOut, StringClass& dottedExtensionOut) {
+	template<class CharType, class StringClass>
+	void extractPathFilenameAndExtension(const std::basic_string_view<CharType>& filenameView, StringClass& pathOut, StringClass& filenameOut, StringClass& dottedExtensionOut) {
 		const size_t stringEnd = filenameView.length();
 		const size_t pathStart = 0;
 		size_t filenameStart = pathStart;
 
-		const size_t slashLocation = filenameView.find_last_of("\\/");
-		if (slashLocation != std::string_view::npos) {
+		const size_t slashLocation = filenameView.find_last_of(FilepathTraits<CharType>::PathSeparators);
+		if (slashLocation != std::basic_string_view<CharType>::npos) {
 			filenameStart = slashLocation + 1;
 		}
 
@@ -181,17 +243,19 @@ namespace FileSystem{
 
 		pathOut = filenameView.substr(pathStart, pathLength);
 
-		const std::string_view afterPathView = filenameView.substr(filenameStart);
-		extractFilenameAndExtension<StringClass>(afterPathView, filenameOut, dottedExtensionOut);
+		const std::basic_string_view<CharType> afterPathView = filenameView.substr(filenameStart);
+		extractFilenameAndExtension<CharType, StringClass>(afterPathView, filenameOut, dottedExtensionOut);
 	}
-	template<class StringClass>
-	void extractPathFilenameAndExtension(const char* filename, StringClass& pathOut, StringClass& filenameOut, StringClass& dottedExtensionOut) {
-		std::string_view filenameView(filename);
+	template<class CharType, class StringClass>
+	void extractPathFilenameAndExtension(const CharType* filename, StringClass& pathOut, StringClass& filenameOut, StringClass& dottedExtensionOut) {
+		std::basic_string_view<CharType> filenameView(filename);
 
 		extractPathFilenameAndExtension(filenameView, pathOut, filenameOut, dottedExtensionOut);
 	}
 	void extractPathFilenameAndExtension(const char* filename, std::string_view& pathOut, std::string_view& filenameOut, std::string_view& dottedExtensionOut);
 	void extractPathFilenameAndExtension(const char* filename, std::string& pathOut, std::string& filenameOut, std::string& dottedExtensionOut);
+	void extractPathFilenameAndExtension(const wchar_t* filename, std::wstring_view& pathOut, std::wstring_view& filenameOut, std::wstring_view& dottedExtensionOut);
+	void extractPathFilenameAndExtension(const wchar_t* filename, std::wstring& pathOut, std::wstring& filenameOut, std::wstring& dottedExtensionOut);
 
 	std::string changeFileExtension(const char* filename, const char* newExtension);
 	std::wstring changeFileExtension(const wchar_t* filename, const wchar_t* newExtension);
@@ -203,12 +267,14 @@ namespace FileSystem{
 	std::string mergeRelativePath(const char* startDirectory, const char* relativePath);
 	std::string createRelativePath(const char* startDirectory, const char* endDirectory);
 
+	bool getFullPathName(const char* filePath, std::string& fullPathOut);
 	bool getFullPathName(const wchar_t* filePath, std::wstring& fullPathOut);
 	bool getFullPathName(const char* filePath, std::wstring& fullPathOut);
 
 	bool canonicalizePathName(const wchar_t* filePath, std::wstring& canonicalizedOut);
 	bool canonicalizePathName(const char* filePath, std::string& canonicalizedOut);
-	bool canonicalizePathName(const std::string_view& filePath, std::string& canonicalizedOut);
+	bool canonicalizePathName(const std::string_view& filePath, std::string& canonicalizedOutUtf8);
+	bool canonicalizePathName(const std::wstring& filePath, std::wstring& canonicalizedOut);
 	bool canonicalizePathName(const std::wstring& filePath, std::string& canonicalizedOut);
 
 	bool getCurrentDirectory(std::string& currentDirectoryOut);

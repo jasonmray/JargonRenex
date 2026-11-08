@@ -208,6 +208,8 @@
     <ClCompile Include="src\FileSystem\BinaryFileReader.cpp" />
     <ClCompile Include="src\FileSystem\BinaryFileWriter.cpp" />
     <ClCompile Include="src\FileSystem\DirectoryListing.cpp" />
+    <ClCompile Include="src\FileSystem\DirectoryListingWide.cpp" />
+    <ClCompile Include="src\FileSystem\FileSorting.cpp" />
     <ClCompile Include="src\FileSystem\FileSystemVisitor.cpp" />
     <ClCompile Include="src\FileSystem\FileSystemWalker.cpp" />
     <ClCompile Include="src\FileSystem\Utilities.cpp" />
@@ -216,6 +218,7 @@
     <ClCompile Include="src\Math\Utilities.cpp" />
     <ClCompile Include="src\NumberParsing.cpp" />
     <ClCompile Include="src\SmartPointer.cpp" />
+    <ClCompile Include="src\StandardIO.cpp" />
     <ClCompile Include="src\Stopwatch.cpp" />
     <ClCompile Include="src\StreamUtilities.cpp" />
     <ClCompile Include="src\StringUtilities.cpp" />
@@ -255,6 +258,8 @@
     <ClInclude Include="include\Jargon\FileSystem\BinaryFileReader.h" />
     <ClInclude Include="include\Jargon\FileSystem\BinaryFileWriter.h" />
     <ClInclude Include="include\Jargon\FileSystem\DirectoryListing.h" />
+    <ClInclude Include="include\Jargon\FileSystem\DirectoryListingWide.h" />
+    <ClInclude Include="include\Jargon\FileSystem\FileSorting.h" />
     <ClInclude Include="include\Jargon\FileSystem\FileSystemVisitor.h" />
     <ClInclude Include="include\Jargon\FileSystem\FileSystemWalker.h" />
     <ClInclude Include="include\Jargon\FileSystem\Utilities.h" />
@@ -270,6 +275,7 @@
     <ClInclude Include="include\Jargon\ProviderObject.h" />
     <ClInclude Include="include\Jargon\ScopedPointer.h" />
     <ClInclude Include="include\Jargon\SmartPointer.h" />
+    <ClInclude Include="include\Jargon\StandardIO.h" />
     <ClInclude Include="include\Jargon\StlUtilities.h" />
     <ClInclude Include="include\Jargon\Stopwatch.h" />
     <ClInclude Include="include\Jargon\StreamUtilities.h" />

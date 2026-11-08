@@ -11,7 +11,7 @@ namespace Jargon{
 
 	class BoostRegexImpl;
 
-	class MatchRegex{
+	class MatchRegex {
 		public:
 			static bool Match(Jargon::ErrorContext& errorContext, const char* matchPattern, const char* modifiers, const std::string& toProcess);
 			static bool Match(Jargon::ErrorContext& errorContext, const char* matchPattern, const char* modifiers, const std::string& toProcess, std::vector<std::string>& capturesOut);

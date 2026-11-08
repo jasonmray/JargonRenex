@@ -44,7 +44,7 @@ namespace FileSystem {
 		stdOpenMode = std::ios::binary | std::ios::out;
 
 		if (mode == OpenMode_Append) {
-			stdOpenMode |= std::ios::ate;
+			stdOpenMode |= std::ios::app;
 		}
 
 		outputFile.open(filename, stdOpenMode);

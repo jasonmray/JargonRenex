@@ -61,8 +61,12 @@ namespace FileSystem{
 
 		WindowsFileFinder fileFinder;
 		if (!fileFinder.start(findExpression)) {
-			setLastErrorFrom(fileFinder);
-			return false;
+			if (!fileSystemVisitor.onError(fileFinder, fileFinder.getLastErrorCode())) {
+				setLastErrorFrom(fileFinder);
+				return false;
+			} else {
+				return fileSystemVisitor.endFolder(pathnameToVisit);
+			}
 		}
 
 		std::string filename;
@@ -78,8 +82,10 @@ namespace FileSystem{
 		}
 		
 		if(fileFinder.hasError()) {
-			setLastErrorFrom(fileFinder);
-			return false;
+			if (!fileSystemVisitor.onError(fileFinder, fileFinder.getLastErrorCode())) {
+				setLastErrorFrom(fileFinder);
+				return false;
+			}
 		}
 
 		if (!fileSystemVisitor.endFolder(pathnameToVisit)) {

@@ -1,4 +1,3 @@
-
 #include "Jargon/FileSystem/DirectoryListing.h"
 #include "Jargon/FileSystem/Utilities.h"
 #include "Jargon/StringUtilities.h"
@@ -29,11 +28,10 @@ namespace FileSystem{
 			return false;
 		}
 
-		if (!Jargon::StringUtilities::stringEndsWith(findExpression, '\\')) {
-			findExpression += "\\*";
-		} else {
-			findExpression += "*";
-		}
+		Jargon::FileSystem::ensureTrailingSlash(findExpression);
+		this->path = findExpression;
+
+		findExpression += "*";
 
 		if (!fileFinder.start(findExpression)) {
 			setLastErrorFrom(fileFinder);
@@ -49,6 +47,18 @@ namespace FileSystem{
 
 	bool DirectoryListing::getCurrentFilename(std::string& filenameOut) {
 		return fileFinder.getCurrentFilename(filenameOut);
+	}
+
+	bool DirectoryListing::getCurrentFilenameWithPath(std::string& filepathOut) {
+		std::string filename;
+		if (!getCurrentFilename(filename)) {
+			return false;
+		}
+
+		filepathOut = getPath();
+		filepathOut += filename;
+
+		return true;
 	}
 
 	bool DirectoryListing::advance() {

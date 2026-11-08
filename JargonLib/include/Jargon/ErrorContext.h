@@ -18,8 +18,8 @@ namespace Jargon{
 			// Returns nullptr if no error has been set.
 			const char* getLastError() const;
 
-			void setLastError(const char* formatString, ...);
-			void setLastErrorVarArgs(const char* formatString, va_list args);
+			void setLastError(_Printf_format_string_ const char* formatString, ...);
+			void setLastErrorVarArgs(_Printf_format_string_ const char* formatString, va_list args);
 			void setLastErrorFrom(const ErrorContext& other);
 
 			void clearLastError();

@@ -29,7 +29,7 @@ static const char* getPrintModeString(ProgramOptions::PrintMode value) {
 
 class ArgVector {
 	public:
-		ArgVector(int argc, const char** argv) :
+		ArgVector(int argc, const wchar_t** argv) :
 			argc(argc),
 			argv(argv),
 			currentIndex(0)
@@ -51,32 +51,32 @@ class ArgVector {
 
 		bool isSwitch() const {
 			assert(isValid());
-			return argv[currentIndex][0] == '-';
+			return argv[currentIndex][0] == L'-';
 		}
 
 		bool isGlob() const {
 			assert(isValid());
-			return Jargon::StringUtilities::stringContainsAnyOf(argv[currentIndex], "*?");
+			return Jargon::StringUtilities::stringContainsAnyOf(argv[currentIndex], L"*?");
 		}
 
-		const char* getCurrent() const {
+		const wchar_t* getCurrent() const {
 			assert(isValid());
 			return argv[currentIndex];
 		}
 
-		bool matches(const char* s) const {
+		bool matches(const wchar_t* s) const {
 			return Jargon::StringUtilities::stringEqualCaseInsensitive(s, getCurrent());
 		}
 
-		bool matches(const char* shortOption, const char* longOption) const {
-			return Jargon::StringUtilities::stringEqualCaseInsensitive(shortOption, getCurrent()) ||
+		bool matches(const wchar_t* shortOption, const wchar_t* longOption) const {
+			return Jargon::StringUtilities::stringEqual(shortOption, getCurrent()) ||
 				Jargon::StringUtilities::stringEqualCaseInsensitive(longOption, getCurrent())
 			;
 		}
 
 	private:
 		int argc;
-		const char** argv;
+		const wchar_t** argv;
 		int currentIndex;
 };
 
@@ -130,13 +130,13 @@ void ProgramOptions::PrintHelp() {
 ProgramOptions::ProgramOptions(Jargon::ErrorContext& errorContext):
 	errorContext(errorContext)
 {
-	logFilename = "renex.log";
+	logFilename = L"renex.log";
 }
 
 ProgramOptions::~ProgramOptions(){
 }
 
-bool ProgramOptions::process(int argc, const char** argv) {
+bool ProgramOptions::process(int argc, const wchar_t** argv) {
 	ArgVector argVector(argc, argv);
 
 	if (argVector.isValid()) {
@@ -146,35 +146,35 @@ bool ProgramOptions::process(int argc, const char** argv) {
 	while (argVector.hasNext()) {
 		argVector.moveNext();
 
-		if (argVector.matches("/?")) {
+		if (argVector.matches(L"/?")) {
 			showHelp = true;
 		} else if (argVector.isSwitch()) {
-			if (argVector.matches("-h", "-help") || argVector.matches("--help") || argVector.matches("-?")) {
+			if (argVector.matches(L"-h", L"-help") || argVector.matches(L"--help") || argVector.matches(L"-?")) {
 				showHelp = true;
-			} else if (argVector.matches("-v", "-verbose")) {
+			} else if (argVector.matches(L"-v", L"-verbose")) {
 				printMode = PrintMode_Verbose;
-			} else if (argVector.matches("-q", "-quiet")) {
+			} else if (argVector.matches(L"-q", L"-quiet")) {
 				printMode = PrintMode_Quiet;
-			} else if (argVector.matches("-c", "-continueOnError")) {
+			} else if (argVector.matches(L"-c", L"-continueOnError")) {
 				continueOnError = true;
-			} else if (argVector.matches("-y", "-yes")) {
+			} else if (argVector.matches(L"-y", L"-yes")) {
 				performRenames = true;
-			} else if (argVector.matches("-a", "-ask")) {
+			} else if (argVector.matches(L"-a", L"-ask")) {
 				askForConfirmation = true;
-			} else if (argVector.matches("-e", "-ext")) {
+			} else if (argVector.matches(L"-e", L"-ext")) {
 				includeExtension = true;
-			} else if (argVector.matches("-p", "-path")) {
+			} else if (argVector.matches(L"-p", L"-path")) {
 				includePath = true;
-			} else if (argVector.matches("-m", "-allowMove")) {
+			} else if (argVector.matches(L"-m", L"-allowMove")) {
 				allowMove = true;
-			} else if (argVector.matches("-f", "-createFolders")) {
+			} else if (argVector.matches(L"-f", L"-createFolders")) {
 				createFolders = true;
-			} else if (argVector.matches("-s", "-stdin")) {
+			} else if (argVector.matches(L"-s", L"-stdin")) {
 				readStdin = true;
-			} else if (argVector.matches("-n", "-nolog")) {
+			} else if (argVector.matches(L"-n", L"-nolog")) {
 				logFileEnabled = false;
 			} else {
-				errorContext.setLastError("Unrecognized option %s", argVector.getCurrent());
+				errorContext.setLastError("Unrecognized option %ls", argVector.getCurrent());
 				return false;
 			}
 		} else if (regex.empty()){
@@ -214,28 +214,27 @@ bool ProgramOptions::verify() const {
 	return true;
 }
 
-void ProgramOptions::printSummary(FILE* destination) const {
-	fprintf(destination, "Options:\n");
-	fprintf(destination, "  Command: %s\n", exeName.c_str());
-	fprintf(destination, "  Console messages: %s\n", getPrintModeString(printMode));
-	fprintf(destination, "  Continue on error: %s\n", getBoolString(continueOnError));
+void ProgramOptions::printSummary(PrintFunction printFunction) const {
+	printFunction(L"Options:\n");
+	printFunction(L"  Command: %ls\n", exeName.c_str());
+	printFunction(L"  Console messages: %hs\n", getPrintModeString(printMode));
+	printFunction(L"  Continue on error: %hs\n", getBoolString(continueOnError));
 
-	fprintf(destination, "  Actually rename files: %s\n", getBoolString(performRenames));
-	fprintf(destination, "  Ask for confirmation before renaming: %s\n", getBoolString(askForConfirmation));
-	fprintf(destination, "  Include file extensions in processing: %s\n", getBoolString(includeExtension));
-	fprintf(destination, "  Include file paths in processing: %s\n", getBoolString(includePath));
-	fprintf(destination, "  Create any necessary folder for renaming: %s\n", getBoolString(createFolders));
-	fprintf(destination, "  Write renex.log file: %s\n", getBoolString(logFileEnabled));
+	printFunction(L"  Actually rename files: %hs\n", getBoolString(performRenames));
+	printFunction(L"  Ask for confirmation before renaming: %hs\n", getBoolString(askForConfirmation));
+	printFunction(L"  Include file extensions in processing: %hs\n", getBoolString(includeExtension));
+	printFunction(L"  Include file paths in processing: %hs\n", getBoolString(includePath));
+	printFunction(L"  Create any necessary folder for renaming: %hs\n", getBoolString(createFolders));
+	printFunction(L"  Write renex.log file: %hs\n", getBoolString(logFileEnabled));
 
-	fprintf(destination, "  Regex: %s\n", regex.c_str());
+	printFunction(L"  Regex: %ls\n", regex.c_str());
 
-	fprintf(destination, "  Input files: %zd\n", inputFilenames.size());
+	printFunction(L"  Input files: %zd\n", inputFilenames.size());
 	for (size_t i = 0; i < inputFilenames.size(); i++) {
-		fprintf(destination, "      %zd: %s\n", i, inputFilenames[i].c_str());
+		printFunction(L"      %zd: %ls\n", i, inputFilenames[i].c_str());
 	}
 
-	fprintf(destination, "\n");
-
+	printFunction(L"\n");
 }
 
 bool ProgramOptions::useVerboseOutput() const {
